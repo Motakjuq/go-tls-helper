@@ -14,9 +14,11 @@ type HelperConfig struct {
 	Cert                   string
 	Key                    string
 	KeyPassphrase          string
+	ServerName             string
 	Insecure               bool
 	RootCACerts            string
 	UseSystemRootCACerts   bool
+	ClientAuth             string
 	ClientCACerts          string
 	UseSystemClientCACerts bool
 	MinVersion             string
@@ -57,7 +59,6 @@ func setupCertificate(cfg *tls.Config, required bool, certPath string, certKeyPa
 
 		var certKey []byte
 		if block, _ := pem.Decode(keyFile); block != nil {
-			// fmt.Println(certKeyPass)
 			if x509.IsEncryptedPEMBlock(block) {
 				decryptKey, err := x509.DecryptPEMBlock(block, []byte(certKeyPass))
 				if err != nil {
@@ -129,6 +130,25 @@ func setupVersion(cfg *tls.Config, minVersion string, maxVersion string) error {
 	return nil
 }
 
+func setupClientAuth(cfg *tls.Config, authType string) error {
+	auth := map[string]tls.ClientAuthType{
+		"REQUEST":          tls.RequestClientCert,
+		"REQUIREANY":       tls.RequireAnyClientCert,
+		"VERIFYIFGIVEN":    tls.VerifyClientCertIfGiven,
+		"REQUIREANDVERIFY": tls.RequireAndVerifyClientCert,
+	}
+
+	if len(authType) > 0 {
+		if v, has := auth[strings.ToUpper(authType)]; has {
+			cfg.ClientAuth = v
+		} else {
+			return fmt.Errorf("Invalid client auth. Valid values [REQUEST, REQUIREANY, VERIFYIFGIVEN, REQUIREANDVERIFY]")
+		}
+	}
+
+	return nil
+}
+
 // GenerateTLSConfig creates and returns a new *tls.Config with the configuration provided, otherwise returns an error
 func GenerateTLSConfig(config HelperConfig) (*tls.Config, error) {
 	var err error
@@ -160,7 +180,13 @@ func GenerateTLSConfig(config HelperConfig) (*tls.Config, error) {
 		return nil, err
 	}
 
+	err = setupClientAuth(tlsCfg, config.ClientAuth)
+	if err != nil {
+		return nil, err
+	}
+
 	tlsCfg.InsecureSkipVerify = config.Insecure
+	tlsCfg.ServerName = config.ServerName
 	tlsCfg.BuildNameToCertificate()
 
 	return tlsCfg, nil
