@@ -182,6 +182,24 @@ func Test_setupCertificate(t *testing.T) {
 			1,
 			false,
 		},
+		{
+			"case 14",
+			args{true, "test_data/cert_pass_signed.crt", "test_data/cert_pass.key", ""},
+			0,
+			true,
+		},
+		{
+			"case 15",
+			args{true, "test_data/cert_signed.crt", "test_data/empty.crt", ""},
+			0,
+			true,
+		},
+		{
+			"case 16",
+			args{true, "test_data/empty.crt", "test_data/cert.key", ""},
+			0,
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
